@@ -1,7 +1,7 @@
 import logging
 import os
 import sys
-# import time
+import time
 
 import requests
 
@@ -30,7 +30,7 @@ sent_memes = []
 last_meme = ''
 cur = ''
 timestamp = ''
-
+bot_time = time.time()
 
 def get_api_response():
     global cur, timestamp
@@ -48,7 +48,7 @@ def get_api_response():
 
 
 def get_page():
-    global cached_page, cur
+    global cached_page, cur, sent_memes
     page = []
     if cached_page:
         if last_meme == cached_page[-1].get(
@@ -58,6 +58,7 @@ def get_page():
                 if post.get('type') == 'Photo':
                     page.append(post)
             cached_page = page
+            sent_memes = []
             return page
         else:
             return cached_page
@@ -91,7 +92,15 @@ def new_meme(update, context):
     chat = update.effective_chat
     image, title = get_new_image()
     logging.info(f'отправляем мемас с адресом: {image}')
-    context.bot.send_photo(chat.id, image, caption=title)
+    buttons = ReplyKeyboardMarkup([
+        ['/meme'],
+        ], resize_keyboard=True)
+    context.bot.send_photo(
+        chat.id,
+        image,
+        caption=title,
+        reply_markup=buttons,
+        )
 
 
 def say_hi(update, context):
@@ -119,6 +128,10 @@ def wake_up(update, context):
 
 
 def main():
+    global bot_time,cur
+    if time.time() - bot_time > 172800:
+        cur = []
+        get_api_response()
     updater = Updater(token=my_token)
     try:
         updater.dispatcher.add_handler(CommandHandler('start', wake_up))

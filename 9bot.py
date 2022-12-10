@@ -21,71 +21,46 @@ logging.basicConfig(
     level=logging.INFO)
 
 URL = 'https://9gag.com/v1/group-posts/meme/default/type/hot'
-headers = {
-    'user-agent': 'Mediapartners-Google',
-}
+HEADERS = {'user-agent': 'Mediapartners-Google'}
 
-cached_page = {}
-sent_memes = []
-last_meme = ''
+cached_page = []
 cur = ''
-timestamp = ''
 bot_time = time.time()
 
-def get_api_response():
-    global cur, timestamp
+def get_api_response(cursor: str):
     try:
         url = URL + '?' + cur
-        logging.info(f'Отправлени запрос URL: {url}')
-        response = requests.get(url, headers=headers)
+        logging.info(f'Отправлен запрос URL: {url}')
+        response = requests.get(url, headers=HEADERS)
     except Exception as error:
         logging.error(f'Ошибка при запросе к основному API: {error}')
     else:
         data = response.json()
-        cur = data.get('data').get('nextCursor')
-        timestamp = data.get('meta').get('timestamp')
         return data
 
 
 def get_page():
-    global cached_page, cur, sent_memes
+    global cur
     page = []
-    if cached_page:
-        if last_meme == cached_page[-1].get(
-                'images').get('image700').get('url'):
-            data = get_api_response()
-            for post in data.get('data').get('posts'):
-                if post.get('type') == 'Photo':
-                    page.append(post)
-            cached_page = page
-            sent_memes = []
-            return page
-        else:
-            return cached_page
-    else:
-        data = get_api_response()
-        for post in data.get('data').get('posts'):
-            if post.get('type') == 'Photo':
-                page.append(post)
-        cached_page = page
-        return page
+    data = get_api_response(cur)
+    cur = data.get('data').get('nextCursor')
+    for post in data.get('data').get('posts'):
+        if all([
+            post.get('type') == 'Photo',
+            post.get('promoted') == 0,
+        ]):
+            page.append(post)
+    return page
 
 
 def get_new_image():
-    global last_meme, sent_memes
-    page = get_page()
-    for post in page:
-        if (
-            post.get('promoted') == 0
-            and post.get('type') == 'Photo'
-            and post.get(
-                'images').get('image700').get('url') not in sent_memes
-        ):
-            meme = post.get('images').get('image700').get('url')
-            title = post.get('title')
-            last_meme = meme
-            sent_memes.append(last_meme)
-            return (meme, title)
+    global cached_page
+    if not cached_page:
+        cached_page = get_page()
+    meme = cached_page[0].get('images').get('image700').get('url')
+    title = cached_page[0].get('title')
+    cached_page.pop(0)
+    return meme, title
 
 
 def new_meme(update, context):
@@ -128,10 +103,9 @@ def wake_up(update, context):
 
 
 def main():
-    global bot_time,cur
+    global bot_time, cur
     if time.time() - bot_time > 172800:
-        cur = []
-        get_api_response()
+        cur = ''
     updater = Updater(token=my_token)
     try:
         updater.dispatcher.add_handler(CommandHandler('start', wake_up))

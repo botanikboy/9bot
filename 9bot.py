@@ -27,7 +27,10 @@ cached_page = []
 cur = ''
 bot_time = time.time()
 
+
 def get_api_response(cursor: str):
+    if cursor is None:
+        cursor = ''
     try:
         url = URL + '?' + cur
         logging.info(f'Отправлен запрос URL: {url}')
@@ -35,6 +38,7 @@ def get_api_response(cursor: str):
     except Exception as error:
         logging.error(f'Ошибка при запросе к основному API: {error}')
     else:
+        # print(response)
         data = response.json()
         return data
 
@@ -111,7 +115,7 @@ def main():
         updater.dispatcher.add_handler(CommandHandler('start', wake_up))
         updater.dispatcher.add_handler(CommandHandler('meme', new_meme))
         updater.dispatcher.add_handler(MessageHandler(Filters.all, say_hi))
-        updater.start_polling(poll_interval=2.0)
+        updater.start_polling(poll_interval=4.0)
         updater.idle()
     except Exception as error:
         logging.error(f'Error in bot: {error}')

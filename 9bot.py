@@ -38,7 +38,6 @@ def get_api_response(cursor: str):
     except Exception as error:
         logging.error(f'Ошибка при запросе к основному API: {error}')
     else:
-        # print(response)
         data = response.json()
         return data
 
@@ -110,6 +109,7 @@ def main():
     global bot_time, cur
     if time.time() - bot_time > 172800:
         cur = ''
+        bot_time = time.time()
     updater = Updater(token=my_token)
     try:
         updater.dispatcher.add_handler(CommandHandler('start', wake_up))
